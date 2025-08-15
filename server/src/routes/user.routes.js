@@ -1,6 +1,10 @@
 import express from "express";
 import { body } from "express-validator";
-import { loginUser, registerUser } from "../controllers/user.controller.js";
+import {
+  loginUser,
+  logoutUser,
+  registerUser,
+} from "../controllers/user.controller.js";
 import { protectUser } from "../middlewares/user.middleware.js";
 
 const userRouter = express.Router();
@@ -21,5 +25,7 @@ userRouter.post(
   body("password").notEmpty().withMessage("Password is required"),
   loginUser
 );
+
+userRouter.post("/logout", protectUser, logoutUser);
 
 export default userRouter;
