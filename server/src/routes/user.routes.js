@@ -4,6 +4,7 @@ import {
   loginUser,
   logoutUser,
   registerUser,
+  getUserProfile,
 } from "../controllers/user.controller.js";
 import { protectUser } from "../middlewares/user.middleware.js";
 
@@ -27,5 +28,7 @@ userRouter.post(
 );
 
 userRouter.post("/logout", protectUser, logoutUser);
+
+userRouter.get("/profile", protectUser, getUserProfile);
 
 export default userRouter;
