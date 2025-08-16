@@ -4,14 +4,14 @@ import connectDb from "./src/config/connectDb.js";
 import { initSocket } from "./src/sockets/socket.js";
 import { createServer } from "http";
 
-const server = createServer(app);
+const httpServer = createServer(app);
 
-initSocket(server);
+initSocket(httpServer);
 
 const startServer = async () => {
   await connectDb();
-  
-  server.listen(PORT, () => {
+
+  httpServer.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
 };

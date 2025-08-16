@@ -16,12 +16,16 @@ export const registerUser = async (req, res) => {
 
     const token = user.generateAuthToken();
 
-    res.cookie("token", token, {
+    // In development we avoid strict sameSite and secure so the cookie can be sent
+    // from a different origin like a static dev server. In production keep it strict.
+    const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // send cookie only over HTTPS in production
-      sameSite: "strict", // helps prevent CSRF
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
-    });
+    };
+
+    res.cookie("token", token, cookieOptions);
 
     res
       .status(201)
@@ -51,12 +55,14 @@ export const loginUser = async (req, res) => {
 
     const token = user.generateAuthToken();
 
-    res.cookie("token", token, {
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    };
+
+    res.cookie("token", token, cookieOptions);
 
     res
       .status(200)
