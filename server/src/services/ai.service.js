@@ -8,9 +8,14 @@ const ai = new GoogleGenAI({
 async function generateAiResponse(prompt, history) {
   console.log("Generating AI response for prompt:", prompt);
   try {
+    const formattedHistory = history.map((message) => ({
+      role: message.sender === "assistant" ? "model" : "user",
+      parts: [{ text: message.content }],
+    }));
+
     const chat = ai.chats.create({
       model: "gemini-2.5-flash",
-      history: history,
+      history: formattedHistory,
     });
 
     const response = await chat.sendMessage({

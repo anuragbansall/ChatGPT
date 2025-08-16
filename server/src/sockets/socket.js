@@ -8,13 +8,20 @@ import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/config.js";
 
 export const initSocket = (httpServer) => {
-  const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5500";
+  const CLIENT_URLS = [
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
+    process.env.CLIENT_URL,
+  ].filter(Boolean);
 
   const io = new Server(httpServer, {
     cors: {
-      origin: CLIENT_URL,
+      origin: CLIENT_URLS,
       methods: ["GET", "POST"],
       credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization"],
     },
   });
 
@@ -97,6 +104,7 @@ export const initSocket = (httpServer) => {
         return;
       }
 
+      console.log("User message saved:", userMessage);
       // notify the client that message was saved
       socket.emit("message_saved", userMessage);
 
@@ -121,11 +129,13 @@ export const initSocket = (httpServer) => {
 
         let errorMessage = "Failed to generate AI response";
         if (error?.response?.status === 429) {
-          errorMessage = "AI service rate limit exceeded. Please try again later.";
+          errorMessage =
+            "AI service rate limit exceeded. Please try again later.";
         } else if (error?.response?.status === 400) {
           errorMessage = "Invalid request to AI service.";
         } else if (error?.response?.status >= 500) {
-          errorMessage = "AI service is currently unavailable. Please try again later.";
+          errorMessage =
+            "AI service is currently unavailable. Please try again later.";
         } else if (error?.message) {
           errorMessage = error.message;
         }
