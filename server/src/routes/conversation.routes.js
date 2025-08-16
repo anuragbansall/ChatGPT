@@ -1,6 +1,6 @@
 import express from "express";
 import {
-  createConversation,
+  createConversationController,
   getConversations,
   getConversationById,
   sendMessage,
@@ -15,7 +15,7 @@ conversationRouter.use(protectUser);
 conversationRouter.post(
   "/",
   [body("title").notEmpty().withMessage("Title is required")],
-  createConversation
+  createConversationController
 );
 conversationRouter.get("/", getConversations);
 conversationRouter.get("/:id", getConversationById);
