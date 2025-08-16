@@ -8,17 +8,9 @@ import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/config.js";
 
 export const initSocket = (httpServer) => {
-  const CLIENT_URLS = [
-    "http://localhost:5500",
-    "http://127.0.0.1:5500",
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    process.env.CLIENT_URL,
-  ].filter(Boolean);
-
   const io = new Server(httpServer, {
     cors: {
-      origin: CLIENT_URLS,
+      origin: "*",
       methods: ["GET", "POST"],
       credentials: true,
       allowedHeaders: ["Content-Type", "Authorization"],
@@ -26,7 +18,6 @@ export const initSocket = (httpServer) => {
   });
 
   io.use((socket, next) => {
-    // Accept token from handshake auth or query
     const token = socket.handshake.auth?.token || socket.handshake.query?.token;
 
     if (!token) {
@@ -35,7 +26,8 @@ export const initSocket = (httpServer) => {
 
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
-      socket.user = decoded; // Attach user info to socket
+
+      socket.user = decoded;
       next();
     } catch (err) {
       return next(new Error("Authentication error: Invalid token"));
@@ -48,8 +40,6 @@ export const initSocket = (httpServer) => {
     socket.on("disconnect", () => {
       console.log(`Client disconnected: ${socket.user.id}`);
     });
-
-    // Removed in-memory socket.history
 
     socket.on("message", async (data) => {
       // If the client sent a JSON string (common from raw WebSocket or Postman), parse it.
@@ -65,12 +55,10 @@ export const initSocket = (httpServer) => {
       }
       // normalize payload to support multiple client shapes
       payload = payload || {};
-      const conversationId =
-        payload.conversation ||
-        payload.conversationId ||
-        payload.conversation_id ||
-        payload.conversationID;
-      const prompt = payload.prompt || payload.content || payload.text;
+
+      const conversationId = payload.conversationId;
+
+      const prompt = payload.prompt;
 
       if (!conversationId) {
         console.error(
@@ -104,13 +92,11 @@ export const initSocket = (httpServer) => {
         return;
       }
 
-      console.log("User message saved:", userMessage);
       // notify the client that message was saved
       socket.emit("message_saved", userMessage);
 
       try {
         // Fetch conversation history from the database or service
-        // You need to implement getConversationHistory in your message service
         const history = await getConversationHistory(conversationId);
 
         const response = await generateAiResponse(prompt, history);
@@ -118,7 +104,7 @@ export const initSocket = (httpServer) => {
         // Save AI response
         const aiMessage = await createMessage({
           conversation: conversationId,
-          sender: "assistant",
+          sender: "model",
           content: response,
         });
 

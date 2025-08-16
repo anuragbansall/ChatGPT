@@ -26,8 +26,8 @@ conversationRouter.post(
     body("sender")
       .notEmpty()
       .withMessage("Sender is required")
-      .isIn(["user", "assistant"])
-      .withMessage("Sender must be either 'user' or 'assistant'"),
+      .isIn(["user", "model"])
+      .withMessage("Sender must be either 'user' or 'model'"),
   ],
   sendMessage
 );

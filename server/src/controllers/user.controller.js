@@ -16,8 +16,6 @@ export const registerUser = async (req, res) => {
 
     const token = user.generateAuthToken();
 
-    // In development we avoid strict sameSite and secure so the cookie can be sent
-    // from a different origin like a static dev server. In production keep it strict.
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -26,7 +24,6 @@ export const registerUser = async (req, res) => {
     };
 
     res.cookie("token", token, cookieOptions);
-
     res
       .status(201)
       .json({ message: "User registered successfully", user, token });

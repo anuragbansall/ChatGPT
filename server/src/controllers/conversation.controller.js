@@ -1,6 +1,9 @@
 import Conversation from "../models/conversation.model.js";
 import { createConversation } from "../services/conversation.service.js";
-import { createMessage } from "../services/message.service.js";
+import {
+  createMessage,
+  getConversationHistory,
+} from "../services/message.service.js";
 import Message from "../models/message.model.js";
 import { validationResult } from "express-validator";
 
@@ -16,6 +19,7 @@ export const createConversationController = async (req, res) => {
 
   try {
     const conversation = await createConversation({ title, user: userId });
+
     res.status(201).json(conversation);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -66,6 +70,7 @@ export const sendMessage = async (req, res) => {
       sender,
       content,
     });
+
     res.status(201).json(message);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -76,7 +81,8 @@ export const getMessages = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const messages = await Message.find({ conversation: id });
+    const messages = await getConversationHistory(id);
+
     res.status(200).json(messages);
   } catch (error) {
     res.status(500).json({ error: error.message });

@@ -29,7 +29,7 @@ export const getConversationHistory = async (conversationId) => {
     const messages = await Message.find({ conversation: conversationId }).sort({
       createdAt: 1,
     });
-    
+
     return messages;
   } catch (error) {
     throw error;

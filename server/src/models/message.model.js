@@ -6,7 +6,7 @@ const messageSchema = new mongoose.Schema({
     ref: "Conversation",
     required: true,
   },
-  sender: { type: String, enum: ["user", "assistant"], required: true },
+  sender: { type: String, enum: ["user", "model"], required: true },
   content: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
 });
