@@ -4,8 +4,10 @@ import {
   createMessage,
   getConversationHistory,
 } from "../services/message.service.js";
+import { verifyConversationOwnership } from "../services/conversation.service.js";
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/config.js";
+import { getUserById } from "../services/user.service.js";
 
 export const initSocket = (httpServer) => {
   const io = new Server(httpServer, {
@@ -17,7 +19,7 @@ export const initSocket = (httpServer) => {
     },
   });
 
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token || socket.handshake.query?.token;
 
     if (!token) {
@@ -27,10 +29,22 @@ export const initSocket = (httpServer) => {
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
 
-      socket.user = decoded;
+      // Validate that the user actually exists in the database
+      const user = await getUserById(decoded.id);
+      if (!user) {
+        return next(new Error("Authentication error: User not found"));
+      }
+
+      // Store the full user object (not just the decoded token)
+      socket.user = user;
       next();
     } catch (err) {
-      return next(new Error("Authentication error: Invalid token"));
+      if (err.name === "TokenExpiredError") {
+        return next(new Error("Authentication error: Token expired"));
+      } else if (err.name === "JsonWebTokenError") {
+        return next(new Error("Authentication error: Invalid token"));
+      }
+      return next(new Error("Authentication error: " + err.message));
     }
   });
 
@@ -57,7 +71,6 @@ export const initSocket = (httpServer) => {
       payload = payload || {};
 
       const conversationId = payload.conversationId;
-
       const prompt = payload.prompt;
 
       if (!conversationId) {
@@ -75,6 +88,18 @@ export const initSocket = (httpServer) => {
           payload
         );
         socket.emit("error", "Missing prompt/content");
+        return;
+      }
+
+      // Verify that the user owns the conversation
+      try {
+        await verifyConversationOwnership(conversationId, socket.user._id);
+      } catch (err) {
+        console.error(
+          "Conversation ownership verification failed:",
+          err.message
+        );
+        socket.emit("error", "Access denied: " + err.message);
         return;
       }
 
