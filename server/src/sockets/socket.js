@@ -124,7 +124,23 @@ export const initSocket = (httpServer) => {
         // Fetch conversation history from the database or service
         const history = await getConversationHistory(conversationId);
 
-        const response = await generateAiResponse(prompt, history);
+        // Emit streaming start event
+        socket.emit("stream_start", { conversationId });
+
+        let fullResponse = "";
+
+        const response = await generateAiResponse(prompt, history, (chunk) => {
+          // Stream each chunk to the client immediately
+          console.log("Socket - Streaming chunk to client:", chunk);
+          socket.emit("stream_chunk", {
+            chunk,
+            conversationId,
+            timestamp: new Date().toISOString(),
+          });
+        });
+
+        // Emit streaming end event
+        socket.emit("stream_end", { conversationId });
 
         // Save AI response
         const aiMessage = await createMessage({
@@ -133,8 +149,12 @@ export const initSocket = (httpServer) => {
           content: response,
         });
 
-        // send the AI response text and the saved message object
-        socket.emit("response", { text: response, message: aiMessage });
+        // send the final response and the saved message object
+        socket.emit("response", {
+          text: response,
+          message: aiMessage,
+          conversationId,
+        });
       } catch (error) {
         console.error("Error generating AI response:", error);
 
