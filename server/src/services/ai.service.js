@@ -5,7 +5,7 @@ const ai = new GoogleGenAI({
   apiKey: GEMINI_API_KEY,
 });
 
-async function generateAiResponse(prompt, history = [], onChunk = null) {
+export async function generateAiResponse(prompt, history = [], onChunk = null) {
   console.log("Generating AI response for prompt:", prompt);
 
   try {
@@ -45,4 +45,20 @@ async function generateAiResponse(prompt, history = [], onChunk = null) {
   }
 }
 
-export default generateAiResponse;
+// generate embeddings for a given text
+export async function generateEmbeddings(content) {
+  try {
+    const response = await ai.models.embedContent({
+      model: "gemini-embedding-001",
+      contents: content,
+      config: {
+        outputDimensionality: 768,
+      },
+    });
+
+    return response.embeddings[0].values;
+  } catch (error) {
+    console.error("Error generating embeddings:", error);
+    throw error;
+  }
+}

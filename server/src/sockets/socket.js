@@ -1,5 +1,8 @@
 import { Server } from "socket.io";
-import generateAiResponse from "../services/ai.service.js";
+import {
+  generateAiResponse,
+  generateEmbeddings,
+} from "../services/ai.service.js";
 import {
   createMessage,
   getConversationHistory,
@@ -8,6 +11,7 @@ import { verifyConversationOwnership } from "../services/conversation.service.js
 import jwt from "jsonwebtoken";
 import { JWT_SECRET } from "../config/config.js";
 import { getUserById } from "../services/user.service.js";
+import { createMemory, queryMemory } from "../services/vector.service.js";
 
 export const initSocket = (httpServer) => {
   const io = new Server(httpServer, {
@@ -105,11 +109,24 @@ export const initSocket = (httpServer) => {
 
       // Save user message with sender === 'user'
       let userMessage;
+      let userVectors;
       try {
         userMessage = await createMessage({
           conversation: conversationId,
           sender: "user",
           content: prompt,
+        });
+
+        userVectors = await generateEmbeddings(userMessage.content);
+
+        await createMemory({
+          vectors: userVectors,
+          metadata: {
+            conversationId,
+            userId: socket.user._id,
+            text: userMessage.content,
+          },
+          messageId: userMessage._id,
         });
       } catch (err) {
         console.error("Failed to save user message:", err.message || err);
@@ -121,17 +138,24 @@ export const initSocket = (httpServer) => {
       socket.emit("message_saved", userMessage);
 
       try {
+        const memoryMatches = await queryMemory({
+          queryVector: userVectors,
+          metadata: {
+            userId: socket.user._id,
+          },
+          limit: 5,
+        });
+
+        console.log("Memory matches found:", memoryMatches);
+
         // Fetch conversation history from the database or service
         const history = await getConversationHistory(conversationId);
 
         // Emit streaming start event
         socket.emit("stream_start", { conversationId });
 
-        let fullResponse = "";
-
         const response = await generateAiResponse(prompt, history, (chunk) => {
           // Stream each chunk to the client immediately
-          console.log("Socket - Streaming chunk to client:", chunk);
           socket.emit("stream_chunk", {
             chunk,
             conversationId,
@@ -147,6 +171,18 @@ export const initSocket = (httpServer) => {
           conversation: conversationId,
           sender: "model",
           content: response,
+        });
+
+        const aiVectors = await generateEmbeddings(aiMessage.content);
+
+        await createMemory({
+          vectors: aiVectors,
+          metadata: {
+            userId: socket.user._id,
+            conversationId,
+            text: aiMessage.content,
+          },
+          messageId: aiMessage._id,
         });
 
         // send the final response and the saved message object

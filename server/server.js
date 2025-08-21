@@ -1,6 +1,6 @@
 import app from "./src/app.js";
 import { PORT } from "./src/config/config.js";
-import connectDb from "./src/config/connectDb.js";
+import connectDb from "./src/lib/connectDb.js";
 import { initSocket } from "./src/sockets/socket.js";
 import { createServer } from "http";
 
