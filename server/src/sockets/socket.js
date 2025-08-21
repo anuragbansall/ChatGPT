@@ -146,22 +146,27 @@ export const initSocket = (httpServer) => {
           limit: 5,
         });
 
-        console.log("Memory matches found:", memoryMatches);
+        const longTermMemory = memoryMatches;
 
         // Fetch conversation history from the database or service
-        const history = await getConversationHistory(conversationId);
+        const shortTermMemory = await getConversationHistory(conversationId);
 
         // Emit streaming start event
         socket.emit("stream_start", { conversationId });
 
-        const response = await generateAiResponse(prompt, history, (chunk) => {
-          // Stream each chunk to the client immediately
-          socket.emit("stream_chunk", {
-            chunk,
-            conversationId,
-            timestamp: new Date().toISOString(),
-          });
-        });
+        const response = await generateAiResponse(
+          prompt,
+          shortTermMemory,
+          longTermMemory,
+          (chunk) => {
+            // Stream each chunk to the client immediately
+            socket.emit("stream_chunk", {
+              chunk,
+              conversationId,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        );
 
         // Emit streaming end event
         socket.emit("stream_end", { conversationId });

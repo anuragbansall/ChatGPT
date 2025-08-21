@@ -5,18 +5,33 @@ const ai = new GoogleGenAI({
   apiKey: GEMINI_API_KEY,
 });
 
-export async function generateAiResponse(prompt, history = [], onChunk = null) {
-  console.log("Generating AI response for prompt:", prompt);
+function buildSystemInstruction(longTermMemory) {
+  return `
+    You are a helpful assistant. Use the following information to answer questions:
+    ${longTermMemory.map((record) => record.metadata.text).join("\n")}
+  `;
+}
 
+export async function generateAiResponse(
+  prompt,
+  shortTermMemory = [],
+  longTermMemory = [],
+  onChunk = null
+) {
   try {
-    const formattedHistory = (history || []).map((message) => ({
+    const formattedHistory = (shortTermMemory || []).map((message) => ({
       role: message.sender, // sender is already 'user' or 'model'
       parts: [{ text: message.content }],
     }));
 
+    const systemInstruction = buildSystemInstruction(longTermMemory);
+
     const chat = ai.chats.create({
       model: "gemini-2.5-flash",
       history: formattedHistory,
+      config: {
+        systemInstruction,
+      },
     });
 
     const stream = await chat.sendMessageStream({
@@ -29,11 +44,8 @@ export async function generateAiResponse(prompt, history = [], onChunk = null) {
       const chunkText = chunk.text;
       fullResponse += chunkText;
 
-      console.log("AI Service - Chunk received:", chunkText);
-
       // If a callback is provided, call it with each chunk
       if (onChunk && typeof onChunk === "function") {
-        console.log("AI Service - Calling onChunk callback with:", chunkText);
         onChunk(chunkText);
       }
     }

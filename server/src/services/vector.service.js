@@ -16,6 +16,7 @@ export const createMemory = async ({ vectors = [], metadata, messageId }) => {
         metadata,
       },
     ]);
+
     return response;
   } catch (error) {
     console.error("Error upserting to Pinecone:", error);
