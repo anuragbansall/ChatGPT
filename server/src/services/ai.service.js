@@ -7,7 +7,8 @@ const ai = new GoogleGenAI({
 
 function buildSystemInstruction(longTermMemory) {
   return `
-    You are a helpful assistant. Use the following information to answer questions:
+    You are a helpful assistant.
+    This is a long-term memory use it if needed to answer questions:
     ${longTermMemory.map((record) => record.metadata.text).join("\n")}
   `;
 }

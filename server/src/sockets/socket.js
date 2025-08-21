@@ -110,14 +110,17 @@ export const initSocket = (httpServer) => {
       // Save user message with sender === 'user'
       let userMessage;
       let userVectors;
-      try {
-        userMessage = await createMessage({
-          conversation: conversationId,
-          sender: "user",
-          content: prompt,
-        });
 
-        userVectors = await generateEmbeddings(userMessage.content);
+      try {
+        // Start creating the message and generating embeddings in parallel
+        [userMessage, userVectors] = await Promise.all([
+          createMessage({
+            conversation: conversationId,
+            sender: "user",
+            content: prompt,
+          }),
+          generateEmbeddings(prompt),
+        ]);
 
         await createMemory({
           vectors: userVectors,
@@ -172,13 +175,15 @@ export const initSocket = (httpServer) => {
         socket.emit("stream_end", { conversationId });
 
         // Save AI response
-        const aiMessage = await createMessage({
-          conversation: conversationId,
-          sender: "model",
-          content: response,
-        });
-
-        const aiVectors = await generateEmbeddings(aiMessage.content);
+        // Start creating the AI message and generating embeddings in parallel
+        const [aiMessage, aiVectors] = await Promise.all([
+          createMessage({
+            conversation: conversationId,
+            sender: "model",
+            content: response,
+          }),
+          generateEmbeddings(response),
+        ]);
 
         await createMemory({
           vectors: aiVectors,
