@@ -9,8 +9,8 @@ export const AuthModalProvider = ({ children }) => {
   const [isUserLoading, setIsUserLoading] = useState(true);
   const [userError, setUserError] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  // console.log(user); // Debug log removed for production
+  const [conversationsHistory, setConversationsHistory] = useState([]);
+  const [currentConversation, setCurrentConversation] = useState(null);
 
   const login = async (userData) => {
     try {
@@ -67,6 +67,35 @@ export const AuthModalProvider = ({ children }) => {
     }
   };
 
+  const getConversationsHistory = async () => {
+    try {
+      const response = await API.get("/conversations");
+      setConversationsHistory(response.data);
+    } catch (error) {
+      throw new Error(error.response.data.message);
+    }
+  };
+
+  const getConversationsById = async (id) => {
+    try {
+      const response = await API.get(`/conversations/${id}`);
+      setCurrentConversation(response.data);
+
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response.data.message);
+    }
+  };
+
+  const getCurrentMessages = async (id) => {
+    try {
+      const response = await API.get(`/conversations/${id}/messages`);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response.data.message);
+    }
+  };
+
   const closeAuthModal = () => {
     setIsAuthModalOpen(false);
   };
@@ -78,6 +107,12 @@ export const AuthModalProvider = ({ children }) => {
   useEffect(() => {
     getUserProfile();
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      getConversationsHistory();
+    }
+  }, [isAuthenticated]);
 
   return (
     <AuthModalContext.Provider
@@ -93,6 +128,11 @@ export const AuthModalProvider = ({ children }) => {
         isUserLoading,
         userError,
         isAuthenticated,
+        conversationsHistory,
+        currentConversation,
+        getConversationsHistory,
+        getConversationsById,
+        getCurrentMessages,
       }}
     >
       {children}

@@ -2,61 +2,11 @@ import React, { useContext } from "react";
 import { RiChatNewLine } from "react-icons/ri";
 import { MdOutlineLogout } from "react-icons/md";
 import { AuthModalContext } from "../context/AuthModalContext";
+import { Link } from "react-router-dom";
 
 const SideChatHistory = () => {
-  const { logout, user, isAuthenticated, openAuthModal } =
+  const { logout, user, isAuthenticated, openAuthModal, conversationsHistory } =
     useContext(AuthModalContext);
-
-  const history = [
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-    {
-      label: "What is computer",
-    },
-  ];
 
   const options = [
     {
@@ -84,14 +34,15 @@ const SideChatHistory = () => {
       </div>
 
       <div className="flex h-full flex-col overflow-y-auto">
-        {history.length > 0 ? (
-          history.map((item, idx) => (
-            <a
-              key={idx}
-              className="hover:bg-dark-100/30 w-full cursor-pointer rounded-md px-4 py-3 text-white/80 transition-colors duration-200"
+        {conversationsHistory.length > 0 ? (
+          conversationsHistory.map((item) => (
+            <Link
+              key={item._id}
+              to={`/c/${item._id}`}
+              className="hover:bg-dark-100/30 w-full cursor-pointer overflow-hidden rounded-md px-4 py-3 text-nowrap text-ellipsis text-white/80 capitalize transition-colors duration-200"
             >
-              {item.label}
-            </a>
+              {item.title}
+            </Link>
           ))
         ) : (
           <p className="w-full px-4 py-3 text-white/80">

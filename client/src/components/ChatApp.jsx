@@ -1,61 +1,15 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { AuthModalContext } from "../context/AuthModalContext";
+import { useParams } from "react-router-dom";
 
 const ChatApp = () => {
-  const conversations = [
-    {
-      message: "Hey how can i help you?",
-      role: "model",
-    },
-    {
-      message: "Hey",
-      role: "user",
-    },
-    {
-      message: "Hey how can i help you?",
-      role: "model",
-    },
-    {
-      message: "Hey",
-      role: "user",
-    },
-    {
-      message: "Hey how can i help you?",
-      role: "model",
-    },
-    {
-      message: "Hey",
-      role: "user",
-    },
-    {
-      message: "Hey how can i help you?",
-      role: "model",
-    },
-    {
-      message: "Hey",
-      role: "user",
-    },
-    {
-      message: "Hey how can i help you?",
-      role: "model",
-    },
-    {
-      message: "Hey",
-      role: "user",
-    },
-    {
-      message: "Hey how can i help you?",
-      role: "model",
-    },
-    {
-      message: "Hey",
-      role: "user",
-    },
-  ];
-
   const [inputValue, setInputValue] = useState("");
+  const [conversations, setConversations] = useState([]);
 
-  const { openAuthModal, isAuthenticated, user } = useContext(AuthModalContext);
+  const { id } = useParams();
+  console.log("Current conversation ID:", id);
+  const { openAuthModal, isAuthenticated, user, getCurrentMessages } =
+    useContext(AuthModalContext);
 
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
@@ -73,6 +27,19 @@ const ChatApp = () => {
     setInputValue("");
   };
 
+  useEffect(() => {
+  useEffect(() => {
+    if (!id) {
+      setConversations([]);
+      return;
+    }
+    const fetchConversations = async () => {
+      const data = await getCurrentMessages(id);
+      setConversations(data);
+    };
+
+    fetchConversations();
+  }, [id]);
   return (
     <section className="bg-dark-200 flex h-full w-full flex-col text-white">
       <div className="flex items-center justify-between border-b border-neutral-700 px-6 py-4">
@@ -88,17 +55,17 @@ const ChatApp = () => {
       </div>
 
       <div className="relative flex h-full w-full flex-col gap-2 overflow-y-auto px-12 py-4">
-        {conversations.length > 0 ? (
-          conversations.map((item, idx) => (
+        {conversations?.length > 0 ? (
+          conversations.map((item) => (
             <p
-              key={idx}
+              key={item._id}
               className={`${
-                item.role === "user"
+                item.sender === "user"
                   ? "self-end rounded-tr-[0]"
                   : "self-start rounded-tl-[0]"
               } bg-dark-100/50 rounded-xl px-5 py-3`}
             >
-              {item.message}
+              {item.content}
             </p>
           ))
         ) : (
