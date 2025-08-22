@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState, useRef } from "react";
 import { AuthModalContext } from "../context/AuthModalContext";
 import { useParams } from "react-router-dom";
 import { SocketContext } from "../context/SocketContext";
+import MarkdownRenderer from "./MarkdownRenderer";
 
 const ChatApp = () => {
   const [inputValue, setInputValue] = useState("");
@@ -212,16 +213,20 @@ const ChatApp = () => {
         isTyping ? (
           <>
             {conversations.map((item) => (
-              <p
+              <div
                 key={item._id}
                 className={`${
                   item.sender === "user"
                     ? "self-end rounded-tr-[0]"
                     : "self-start rounded-tl-[0]"
-                } bg-dark-100/50 rounded-xl px-5 py-3`}
+                } bg-dark-100/50 max-w-prose rounded-xl px-5 py-3 leading-relaxed`}
               >
-                {item.content}
-              </p>
+                {item.sender === "user" ? (
+                  <p>{item.content}</p>
+                ) : (
+                  <MarkdownRenderer markdownText={item.content} />
+                )}
+              </div>
             ))}
             {pendingUserMessage && (
               <p className="bg-dark-100/50 animate-pulse self-end rounded-xl rounded-tr-[0] px-5 py-3 opacity-70">

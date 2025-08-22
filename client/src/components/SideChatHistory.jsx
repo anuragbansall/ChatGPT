@@ -2,7 +2,7 @@ import React, { useContext } from "react";
 import { RiChatNewLine } from "react-icons/ri";
 import { MdOutlineLogout } from "react-icons/md";
 import { AuthModalContext } from "../context/AuthModalContext";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 const SideChatHistory = () => {
   const navigate = useNavigate();
@@ -14,6 +14,8 @@ const SideChatHistory = () => {
     conversationsHistory,
     createConversation,
   } = useContext(AuthModalContext);
+
+  const { id } = useParams();
 
   const handleNewChat = async () => {
     try {
@@ -58,7 +60,7 @@ const SideChatHistory = () => {
             <Link
               key={item._id}
               to={`/c/${item._id}`}
-              className="hover:bg-dark-100/30 w-full shrink-0 cursor-pointer overflow-hidden rounded-md px-4 py-3 text-nowrap text-ellipsis text-white/80 capitalize transition-colors duration-200"
+              className={`hover:bg-dark-100/30 w-full shrink-0 cursor-pointer overflow-hidden rounded-md px-4 py-3 text-nowrap text-ellipsis text-white/80 capitalize transition-colors duration-200 ${item._id === id ? "bg-dark-100" : ""}`}
             >
               {item.title}
             </Link>
