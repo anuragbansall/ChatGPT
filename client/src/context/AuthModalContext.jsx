@@ -93,6 +93,19 @@ export const AuthModalProvider = ({ children }) => {
     }
   };
 
+  const createConversation = async (data) => {
+    try {
+      const response = await API.post("/conversations", data);
+
+      setCurrentConversation(response.data);
+      // Add the new conversation to the conversations history immediately
+      setConversationsHistory((prev) => [response.data, ...prev]);
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response.data.message);
+    }
+  };
+
   const getCurrentMessages = async (id) => {
     try {
       const response = await API.get(`/conversations/${id}/messages`);
@@ -139,6 +152,7 @@ export const AuthModalProvider = ({ children }) => {
         getConversationsHistory,
         getConversationsById,
         getCurrentMessages,
+        createConversation,
       }}
     >
       {children}

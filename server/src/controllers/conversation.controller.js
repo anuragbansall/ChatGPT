@@ -30,7 +30,10 @@ export const getConversations = async (req, res) => {
   const userId = req.user._id;
 
   try {
-    const conversations = await Conversation.find({ user: userId });
+    const conversations = await Conversation.find({ user: userId }).sort({
+      updatedAt: -1,
+      createdAt: -1,
+    });
 
     res.status(200).json(conversations);
   } catch (error) {

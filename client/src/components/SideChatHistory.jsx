@@ -2,16 +2,34 @@ import React, { useContext } from "react";
 import { RiChatNewLine } from "react-icons/ri";
 import { MdOutlineLogout } from "react-icons/md";
 import { AuthModalContext } from "../context/AuthModalContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const SideChatHistory = () => {
-  const { logout, user, isAuthenticated, openAuthModal, conversationsHistory } =
-    useContext(AuthModalContext);
+  const navigate = useNavigate();
+  const {
+    logout,
+    user,
+    isAuthenticated,
+    openAuthModal,
+    conversationsHistory,
+    createConversation,
+  } = useContext(AuthModalContext);
+
+  const handleNewChat = async () => {
+    try {
+      const newConversation = await createConversation({ title: "New Chat" });
+      // Navigate to the new conversation
+      navigate(`/c/${newConversation._id}`);
+    } catch (error) {
+      console.error("Error creating new conversation:", error);
+    }
+  };
 
   const options = [
     {
       label: "New Chat",
       icon: <RiChatNewLine />,
+      onClick: handleNewChat,
     },
   ];
 
@@ -23,13 +41,14 @@ const SideChatHistory = () => {
 
       <div className="flex w-full flex-col">
         {options.map((item, idx) => (
-          <a
+          <p
             key={idx}
             className="hover:bg-dark-100/30 flex w-full cursor-pointer items-center gap-2 rounded-md px-4 py-3 text-lg font-semibold text-white transition-colors duration-200"
+            onClick={item.onClick}
           >
             {item.icon}
             {item.label}
-          </a>
+          </p>
         ))}
       </div>
 
@@ -39,7 +58,7 @@ const SideChatHistory = () => {
             <Link
               key={item._id}
               to={`/c/${item._id}`}
-              className="hover:bg-dark-100/30 w-full cursor-pointer overflow-hidden rounded-md px-4 py-3 text-nowrap text-ellipsis text-white/80 capitalize transition-colors duration-200"
+              className="hover:bg-dark-100/30 w-full shrink-0 cursor-pointer overflow-hidden rounded-md px-4 py-3 text-nowrap text-ellipsis text-white/80 capitalize transition-colors duration-200"
             >
               {item.title}
             </Link>
