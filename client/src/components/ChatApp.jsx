@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useRef } from "react";
 import { AuthModalContext } from "../context/AuthModalContext";
 import { useParams } from "react-router-dom";
 import { SocketContext } from "../context/SocketContext";
@@ -10,12 +10,43 @@ const ChatApp = () => {
   const [streamingMessage, setStreamingMessage] = useState("");
   const [pendingUserMessage, setPendingUserMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   const { id } = useParams();
   const { openAuthModal, isAuthenticated, getCurrentMessages } =
     useContext(AuthModalContext);
 
   const { socket, isSocketConnected } = useContext(SocketContext);
+
+  // Simple scroll to bottom function
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+    }
+  };
+
+  // Check if user is near bottom of chat
+  const isNearBottom = () => {
+    if (!chatContainerRef.current) return true;
+
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    const threshold = 100; // pixels from bottom
+    return scrollHeight - scrollTop - clientHeight < threshold;
+  };
+
+  // Handle scroll events to show/hide scroll button
+  const handleScroll = () => {
+    if (!chatContainerRef.current) return;
+
+    const nearBottom = isNearBottom();
+    setShowScrollButton(!nearBottom);
+  };
 
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
@@ -49,6 +80,16 @@ const ChatApp = () => {
       });
 
       setInputValue(""); // Clear input after sending
+
+      // Scroll to bottom when user sends a message
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+          });
+        }
+      }, 100);
     }
   };
 
@@ -66,11 +107,15 @@ const ChatApp = () => {
     const handleStreamStart = () => {
       setIsStreaming(true);
       setStreamingMessage("");
+      // Scroll to bottom when streaming starts
+      setTimeout(scrollToBottom, 100);
     };
 
     // Handle stream_chunk event
     const handleStreamChunk = (data) => {
       setStreamingMessage((prev) => prev + data.chunk);
+      // Scroll to bottom as content streams in
+      setTimeout(scrollToBottom, 50);
     };
 
     // Handle stream_end event
@@ -86,6 +131,16 @@ const ChatApp = () => {
       setIsStreaming(false);
       setStreamingMessage("");
       setIsTyping(false); // Hide typing indicator when response received
+
+      // Scroll to bottom when AI sends a response
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+          });
+        }
+      }, 100);
     };
 
     // Handle errors
@@ -146,7 +201,11 @@ const ChatApp = () => {
         )}
       </div>
 
-      <div className="relative flex h-full w-full flex-col gap-2 overflow-y-auto px-12 py-4">
+      <div
+        ref={chatContainerRef}
+        onScroll={handleScroll}
+        className="relative flex h-full w-full flex-col gap-4 overflow-y-auto scroll-smooth px-12 py-4"
+      >
         {conversations?.length > 0 ||
         isStreaming ||
         pendingUserMessage ||
@@ -181,41 +240,85 @@ const ChatApp = () => {
                 Thinking...
               </p>
             )}
+            {/* Invisible element to scroll to */}
+            <div ref={messagesEndRef} />
           </>
         ) : (
           <h2 className="absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] text-4xl text-white/80">
             What's on your mind?
           </h2>
         )}
+
+        {/* Scroll to bottom button */}
+        {showScrollButton && (
+          <button
+            onClick={scrollToBottom}
+            className="bg-dark-100 hover:bg-dark-200 fixed right-8 bottom-24 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-neutral-600 text-white shadow-lg transition-all duration-200 hover:scale-105"
+            aria-label="Scroll to bottom"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 14l-7 7m0 0l-7-7m7 7V3"
+              />
+            </svg>
+          </button>
+        )}
       </div>
 
       <form
-        className="bg-dark-100 group mx-auto my-4 flex max-w-full items-center gap-2 rounded-full border border-neutral-500 p-3"
+        className={`group mx-auto my-4 flex max-w-full items-center gap-2 rounded-full p-3 transition-all duration-300 ${
+          isStreaming || isTyping || pendingUserMessage
+            ? "glowing-bg"
+            : "bg-dark-100 border border-neutral-500"
+        }`}
         onSubmit={handleSend}
       >
-        <input
-          type="text"
-          placeholder="Enter your text here"
-          className="w-full border-none px-4 text-lg outline-0 transition-all duration-200 focus:w-xl"
-          value={inputValue}
-          onChange={handleInputChange}
-          disabled={isStreaming || isTyping || pendingUserMessage}
-        />
-        <button
-          type="submit"
-          disabled={
-            isStreaming || isTyping || pendingUserMessage || !inputValue.trim()
-          }
-          className={`cursor-pointer rounded-full px-6 py-2 text-white transition-colors duration-200 ${
-            isStreaming || isTyping || pendingUserMessage || !inputValue.trim()
-              ? "bg-dark-200/50 cursor-not-allowed"
-              : "bg-dark-200 hover:bg-dark-300"
+        <div
+          className={`flex w-full items-center gap-2 rounded-full ${
+            isStreaming || isTyping || pendingUserMessage
+              ? "bg-dark-100 p-3"
+              : ""
           }`}
         >
-          {isStreaming || isTyping || pendingUserMessage
-            ? "Processing..."
-            : "Send"}
-        </button>
+          <input
+            type="text"
+            placeholder="Enter your text here"
+            className="w-full border-none bg-transparent px-4 text-lg text-white outline-0 transition-all duration-200 focus:w-xl"
+            value={inputValue}
+            onChange={handleInputChange}
+            disabled={isStreaming || isTyping || pendingUserMessage}
+          />
+          <button
+            type="submit"
+            disabled={
+              isStreaming ||
+              isTyping ||
+              pendingUserMessage ||
+              !inputValue.trim()
+            }
+            className={`cursor-pointer rounded-full px-6 py-2 text-white transition-colors duration-200 ${
+              isStreaming ||
+              isTyping ||
+              pendingUserMessage ||
+              !inputValue.trim()
+                ? "bg-dark-200/50 cursor-not-allowed"
+                : "bg-dark-200 hover:bg-dark-300"
+            }`}
+          >
+            {isStreaming || isTyping || pendingUserMessage
+              ? "Processing..."
+              : "Send"}
+          </button>
+        </div>
       </form>
     </section>
   );
