@@ -8,7 +8,7 @@ const ChatApp = () => {
 
   const { id } = useParams();
   console.log("Current conversation ID:", id);
-  const { openAuthModal, isAuthenticated, user, getCurrentMessages } =
+  const { openAuthModal, isAuthenticated, getCurrentMessages } =
     useContext(AuthModalContext);
 
   const handleInputChange = (e) => {
@@ -28,7 +28,6 @@ const ChatApp = () => {
   };
 
   useEffect(() => {
-  useEffect(() => {
     if (!id) {
       setConversations([]);
       return;
@@ -39,7 +38,7 @@ const ChatApp = () => {
     };
 
     fetchConversations();
-  }, [id]);
+  }, [id, getCurrentMessages]);
   return (
     <section className="bg-dark-200 flex h-full w-full flex-col text-white">
       <div className="flex items-center justify-between border-b border-neutral-700 px-6 py-4">
