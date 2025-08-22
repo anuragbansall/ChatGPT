@@ -55,7 +55,7 @@ const ChatApp = () => {
 
   const [inputValue, setInputValue] = useState("");
 
-  const { openAuthModal } = useContext(AuthModalContext);
+  const { openAuthModal, isAuthenticated, user } = useContext(AuthModalContext);
 
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
@@ -64,8 +64,7 @@ const ChatApp = () => {
   const handleSend = (e) => {
     e.preventDefault();
 
-    // TODO: if not login
-    if (true) {
+    if (!isAuthenticated) {
       openAuthModal();
       return;
     }
@@ -76,8 +75,16 @@ const ChatApp = () => {
 
   return (
     <section className="bg-dark-200 flex h-full w-full flex-col text-white">
-      <div className="flex items-center border-b border-neutral-700 px-6 py-4">
+      <div className="flex items-center justify-between border-b border-neutral-700 px-6 py-4">
         <h1 className="text-2xl font-semibold">ChatGPT</h1>
+        {!isAuthenticated && (
+          <button
+            className="cursor-pointer rounded-full bg-white/80 px-4 py-2 text-black transition-colors duration-200 hover:bg-white/100"
+            onClick={openAuthModal}
+          >
+            Login
+          </button>
+        )}
       </div>
 
       <div className="relative flex h-full w-full flex-col gap-2 overflow-y-auto px-12 py-4">

@@ -5,10 +5,9 @@ import { AuthModalContext } from "./context/AuthModalContext";
 import { AiOutlineLoading } from "react-icons/ai";
 
 const App = () => {
-  const { isAuthModalOpen } = useContext(AuthModalContext);
+  const { isAuthModalOpen, isUserLoading } = useContext(AuthModalContext);
 
-  // TODO: Show loading screen until user is fetched
-  if (false) {
+  if (isUserLoading) {
     return (
       <div className="bg-dark-300 flex h-screen w-screen items-center justify-center text-white">
         <AiOutlineLoading className="animate-spin text-4xl" />

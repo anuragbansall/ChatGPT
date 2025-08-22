@@ -1,8 +1,12 @@
-import React from "react";
+import React, { useContext } from "react";
 import { RiChatNewLine } from "react-icons/ri";
 import { MdOutlineLogout } from "react-icons/md";
+import { AuthModalContext } from "../context/AuthModalContext";
 
 const SideChatHistory = () => {
+  const { logout, user, isAuthenticated, openAuthModal } =
+    useContext(AuthModalContext);
+
   const history = [
     {
       label: "What is computer",
@@ -96,14 +100,26 @@ const SideChatHistory = () => {
         )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 border-t border-neutral-800 pt-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-sm text-white">
-          AB
-        </div>
-        <p className="text-white/80">Anurag Bansal</p>
+      {isAuthenticated ? (
+        <div className="flex shrink-0 items-center gap-2 border-t border-neutral-800 pt-4">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 text-sm text-white">
+            AB
+          </div>
+          <p className="text-white/80">{user?.name || "Guest"}</p>
 
-        <MdOutlineLogout className="ml-auto cursor-pointer text-xl text-white/80 hover:text-white" />
-      </div>
+          <MdOutlineLogout
+            className="ml-auto cursor-pointer text-xl text-white/80 hover:text-white"
+            onClick={logout}
+          />
+        </div>
+      ) : (
+        <button
+          className="cursor-pointer rounded-full bg-white/80 px-4 py-2 text-black transition-colors duration-200 hover:bg-white/100"
+          onClick={openAuthModal}
+        >
+          Login
+        </button>
+      )}
     </aside>
   );
 };

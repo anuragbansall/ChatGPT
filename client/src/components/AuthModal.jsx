@@ -7,9 +7,12 @@ const AuthModal = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    name: "",
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const { closeAuthModal } = useContext(AuthModalContext);
+  const { closeAuthModal, login, register } = useContext(AuthModalContext);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -18,19 +21,36 @@ const AuthModal = () => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Removed logging of sensitive form data for security
+
     if (isSignUp) {
-      console.log("Sign Up Data:", {
-        email: formData.email,
-        password: formData.password,
-        confirmPassword: formData.confirmPassword,
-      });
+      if (formData.password === formData.confirmPassword) {
+        setIsLoading(true);
+
+        try {
+          await register(formData);
+        } catch (error) {
+          console.error("Registration error:", error);
+          setError(error.message);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setError("Passwords do not match");
+      }
     } else {
-      console.log("Login Data:", {
-        email: formData.email,
-        password: formData.password,
-      });
+      setIsLoading(true);
+
+      try {
+        await login(formData);
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -40,6 +60,7 @@ const AuthModal = () => {
       email: "",
       password: "",
       confirmPassword: "",
+      name: "",
     });
   };
 
@@ -80,6 +101,28 @@ const AuthModal = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Name (Sign Up Only) */}
+          {isSignUp && (
+            <div className="space-y-2">
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-neutral-300"
+              >
+                Name
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+                className="input"
+                placeholder="Enter your name"
+              />
+            </div>
+          )}
+
           {/* Email Input */}
           <div className="space-y-2">
             <label
@@ -95,7 +138,7 @@ const AuthModal = () => {
               value={formData.email}
               onChange={handleInputChange}
               required
-              className="bg-dark-100 w-full rounded-lg border border-neutral-600 px-4 py-3 text-white placeholder-neutral-400 transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="input"
               placeholder="Enter your email"
             />
           </div>
@@ -115,8 +158,9 @@ const AuthModal = () => {
               value={formData.password}
               onChange={handleInputChange}
               required
-              className="bg-dark-100 w-full rounded-lg border border-neutral-600 px-4 py-3 text-white placeholder-neutral-400 transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="input"
               placeholder="Enter your password"
+              minLength={6}
             />
           </div>
 
@@ -136,18 +180,22 @@ const AuthModal = () => {
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
                 required
-                className="bg-dark-100 w-full rounded-lg border border-neutral-600 px-4 py-3 text-white placeholder-neutral-400 transition-all duration-200 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                className="input"
                 placeholder="Confirm your password"
+                minLength={6}
               />
             </div>
           )}
+
+          {/* Error Message */}
+          {error && <p className="mt-4 text-sm text-red-500">{error}</p>}
 
           {/* Submit Button */}
           <button
             type="submit"
             className="focus:ring-offset-dark-200 w-full transform rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3 font-semibold text-white transition-all duration-200 hover:scale-[1.02] hover:from-blue-700 hover:to-blue-800 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
           >
-            {isSignUp ? "Create Account" : "Sign In"}
+            {isLoading ? "Loading..." : isSignUp ? "Create Account" : "Sign In"}
           </button>
         </form>
 
@@ -165,24 +213,12 @@ const AuthModal = () => {
             <button
               type="button"
               onClick={toggleMode}
-              className="font-medium text-blue-400 transition-colors duration-200 hover:text-blue-300"
+              className="cursor-pointer font-medium text-blue-400 transition-colors duration-200 hover:text-blue-300"
             >
               {isSignUp ? "Sign In" : "Sign Up"}
             </button>
           </p>
         </div>
-
-        {/* Additional Options (Login Only) */}
-        {!isSignUp && (
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              className="text-sm text-blue-400 transition-colors duration-200 hover:text-blue-300"
-            >
-              Forgot your password?
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,9 +1,71 @@
-import { createContext, useState } from "react";
+import { createContext, useEffect, useState } from "react";
+import API from "../api/axios.js";
 
 export const AuthModalContext = createContext({});
 
 export const AuthModalProvider = ({ children }) => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isUserLoading, setIsUserLoading] = useState(true);
+  const [userError, setUserError] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // console.log(user); // Debug log removed for production
+
+  const login = async (userData) => {
+    try {
+      const response = await API.post("/users/login", userData);
+
+      setUser(response.data.user);
+      setIsAuthenticated(true);
+      setIsAuthModalOpen(false);
+    } catch (error) {
+      throw new Error(error.response.data.message);
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      const response = await API.post("/users/register", userData);
+
+      setUser(response.data.user);
+      setIsAuthenticated(true);
+      setIsAuthModalOpen(false);
+    } catch (error) {
+      throw new Error(error.response.data.message);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await API.post("/users/logout");
+
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsAuthModalOpen(true);
+    } catch (error) {
+      throw new Error(error.response.data.message);
+    }
+  };
+
+  const getUserProfile = async () => {
+    setIsUserLoading(true);
+
+    try {
+      const response = await API.get("/users/profile");
+
+      setUser(response.data.user);
+      setIsAuthenticated(true);
+      setIsAuthModalOpen(false);
+    } catch (error) {
+      setUserError(error.response.data.message);
+      setIsAuthenticated(false);
+      setUser(null);
+      setIsAuthModalOpen(true);
+    } finally {
+      setIsUserLoading(false);
+    }
+  };
 
   const closeAuthModal = () => {
     setIsAuthModalOpen(false);
@@ -13,9 +75,25 @@ export const AuthModalProvider = ({ children }) => {
     setIsAuthModalOpen(true);
   };
 
+  useEffect(() => {
+    getUserProfile();
+  }, []);
+
   return (
     <AuthModalContext.Provider
-      value={{ isAuthModalOpen, closeAuthModal, openAuthModal }}
+      value={{
+        isAuthModalOpen,
+        closeAuthModal,
+        openAuthModal,
+        register,
+        login,
+        logout,
+        getUserProfile,
+        user,
+        isUserLoading,
+        userError,
+        isAuthenticated,
+      }}
     >
       {children}
     </AuthModalContext.Provider>
