@@ -1,4 +1,6 @@
 import React from "react";
+import { RiChatNewLine } from "react-icons/ri";
+import { MdOutlineLogout } from "react-icons/md";
 
 const SideChatHistory = () => {
   const history = [
@@ -55,6 +57,7 @@ const SideChatHistory = () => {
   const options = [
     {
       label: "New Chat",
+      icon: <RiChatNewLine />,
     },
   ];
 
@@ -68,8 +71,9 @@ const SideChatHistory = () => {
         {options.map((item, idx) => (
           <a
             key={idx}
-            className="hover:bg-dark-100/30 w-full cursor-pointer rounded-md px-4 py-3 text-white transition-colors duration-200"
+            className="hover:bg-dark-100/30 flex w-full cursor-pointer items-center gap-2 rounded-md px-4 py-3 text-lg font-semibold text-white transition-colors duration-200"
           >
+            {item.icon}
             {item.label}
           </a>
         ))}
@@ -97,6 +101,8 @@ const SideChatHistory = () => {
           AB
         </div>
         <p className="text-white/80">Anurag Bansal</p>
+
+        <MdOutlineLogout className="ml-auto cursor-pointer text-xl text-white/80 hover:text-white" />
       </div>
     </aside>
   );
