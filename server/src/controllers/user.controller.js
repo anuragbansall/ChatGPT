@@ -79,6 +79,7 @@ export const logoutUser = (req, res) => {
 
 export const getUserProfile = (req, res) => {
   const user = req.user;
+  const token = req.cookies.token;
 
-  res.status(200).json({ user });
+  res.status(200).json({ user, token });
 };

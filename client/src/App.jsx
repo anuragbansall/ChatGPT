@@ -5,7 +5,7 @@ import { AuthModalContext } from "./context/AuthModalContext";
 import { AiOutlineLoading } from "react-icons/ai";
 
 const App = () => {
-  const { isAuthModalOpen, isUserLoading } = useContext(AuthModalContext);
+  const { isUserLoading } = useContext(AuthModalContext);
 
   if (isUserLoading) {
     return (

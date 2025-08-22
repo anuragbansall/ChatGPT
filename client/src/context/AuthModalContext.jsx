@@ -19,6 +19,8 @@ export const AuthModalProvider = ({ children }) => {
       setUser(response.data.user);
       setIsAuthenticated(true);
       setIsAuthModalOpen(false);
+
+      localStorage.setItem("token", response.data.token);
     } catch (error) {
       throw new Error(error.response.data.message);
     }
@@ -31,6 +33,8 @@ export const AuthModalProvider = ({ children }) => {
       setUser(response.data.user);
       setIsAuthenticated(true);
       setIsAuthModalOpen(false);
+
+      localStorage.setItem("token", response.data.token);
     } catch (error) {
       throw new Error(error.response.data.message);
     }
@@ -57,6 +61,8 @@ export const AuthModalProvider = ({ children }) => {
       setUser(response.data.user);
       setIsAuthenticated(true);
       setIsAuthModalOpen(false);
+
+      localStorage.setItem("token", response.data.token);
     } catch (error) {
       setUserError(error.response.data.message);
       setIsAuthenticated(false);
