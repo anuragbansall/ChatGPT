@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
+import { AuthModalContext } from "../context/AuthModalContext";
 
 const ChatApp = () => {
   const conversations = [
@@ -54,12 +55,20 @@ const ChatApp = () => {
 
   const [inputValue, setInputValue] = useState("");
 
+  const { openAuthModal } = useContext(AuthModalContext);
+
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
   };
 
   const handleSend = (e) => {
     e.preventDefault();
+
+    // TODO: if not login
+    if (true) {
+      openAuthModal();
+      return;
+    }
 
     console.log("Send message:", inputValue);
     setInputValue("");
