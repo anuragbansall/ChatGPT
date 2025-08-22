@@ -12,6 +12,7 @@ const ChatApp = () => {
   const [pendingUserMessage, setPendingUserMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isBusy, setIsBusy] = useState(false);
 
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
@@ -62,7 +63,7 @@ const ChatApp = () => {
     }
 
     // Prevent sending if already processing a message (streaming, typing, or has pending message)
-    if (isStreaming || isTyping || pendingUserMessage) {
+    if (isStreaming || isTyping || pendingUserMessage || isBusy) {
       return;
     }
 
@@ -71,6 +72,8 @@ const ChatApp = () => {
     }
 
     if (isSocketConnected && socket) {
+      setIsBusy(true); // Set busy state to prevent multiple sends
+
       // Set pending user message
       setPendingUserMessage(inputValue.trim());
 
@@ -132,6 +135,7 @@ const ChatApp = () => {
       setIsStreaming(false);
       setStreamingMessage("");
       setIsTyping(false); // Hide typing indicator when response received
+      setIsBusy(false); // Reset busy state after response
 
       // Scroll to bottom when AI sends a response
       setTimeout(() => {
@@ -150,6 +154,7 @@ const ChatApp = () => {
       setIsStreaming(false);
       setStreamingMessage("");
       setIsTyping(false); // Hide typing indicator on error
+      setIsBusy(false); // Reset busy state on error
     };
 
     // Register event listeners
@@ -281,7 +286,7 @@ const ChatApp = () => {
 
       <form
         className={`group mx-auto my-4 flex max-w-full items-center gap-2 rounded-full p-3 transition-all duration-300 ${
-          isStreaming || isTyping || pendingUserMessage
+          isStreaming || isTyping || pendingUserMessage || isBusy
             ? "glowing-bg"
             : "bg-dark-100 border border-neutral-500"
         }`}
@@ -289,7 +294,7 @@ const ChatApp = () => {
       >
         <div
           className={`flex w-full items-center gap-2 rounded-full ${
-            isStreaming || isTyping || pendingUserMessage
+            isStreaming || isTyping || pendingUserMessage || isBusy
               ? "bg-dark-100 p-3"
               : ""
           }`}
@@ -300,7 +305,7 @@ const ChatApp = () => {
             className="w-full border-none bg-transparent px-4 text-lg text-white outline-0 transition-all duration-200 focus:w-xl"
             value={inputValue}
             onChange={handleInputChange}
-            disabled={isStreaming || isTyping || pendingUserMessage}
+            disabled={isStreaming || isTyping || pendingUserMessage || isBusy}
           />
           <button
             type="submit"
@@ -308,6 +313,7 @@ const ChatApp = () => {
               isStreaming ||
               isTyping ||
               pendingUserMessage ||
+              isBusy ||
               !inputValue.trim()
             }
             className={`cursor-pointer rounded-full px-6 py-2 text-white transition-colors duration-200 ${
@@ -319,7 +325,7 @@ const ChatApp = () => {
                 : "bg-dark-200 hover:bg-dark-300"
             }`}
           >
-            {isStreaming || isTyping || pendingUserMessage
+            {isStreaming || isTyping || pendingUserMessage || isBusy
               ? "Processing..."
               : "Send"}
           </button>
