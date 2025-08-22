@@ -2,39 +2,65 @@
 
 ## Overview
 
-This is the backend API for a ChatGPT-like application built with Node.js, Express, Socket.IO, and MongoDB. The API provides user authentication, conversation management, messaging capabilities, and real-time AI chat functionality.
+This is a comprehensive API documentation for the ChatGPT server application. The server is built with Node.js, Express.js, MongoDB, Socket.IO, and integrates with Google Gemini AI and Pinecone vector database for intelligent chat functionality.
 
-**Base URL:** `http://localhost:3000` (or your deployed URL)
+## Base URL
 
-## Tech Stack
+- **Development**: `http://localhost:3000`
+- **API Base**: `/api`
 
-- **Runtime:** Node.js
-- **Framework:** Express.js
-- **Database:** MongoDB with Mongoose ODM
-- **Real-time Communication:** Socket.IO
-- **AI Service:** Google Generative AI
-- **Vector Database:** Pinecone
-- **Authentication:** JWT with HTTP-only cookies
+## Technology Stack
+
+- **Backend**: Node.js, Express.js
+- **Database**: MongoDB (with Mongoose ODM)
+- **Authentication**: JWT with HTTP-only cookies
+- **AI Service**: Google Gemini AI (@google/genai)
+- **Vector Database**: Pinecone
+- **Real-time Communication**: Socket.IO
+- **Password Hashing**: bcryptjs
+
+## Environment Variables
+
+```env
+PORT=3000
+JWT_SECRET=your-jwt-secret
+MONGODB_URI=mongodb://localhost:27017/chatgpt
+GEMINI_API_KEY=your-gemini-api-key
+PINECONE_API_KEY=your-pinecone-api-key
+PINECONE_INDEX_NAME=chat-gpt
+NODE_ENV=development
+```
 
 ## Authentication
 
-The API uses JWT tokens for authentication. Tokens are stored as HTTP-only cookies for security.
+The API uses JWT tokens for authentication, which can be provided in two ways:
 
-### Headers Required for Protected Routes
+1. **HTTP-only Cookie**: `token` (preferred method)
+2. **Authorization Header**: `Bearer <token>`
 
-```
-Cookie: token=<jwt_token>
-```
+Protected routes require authentication middleware that validates the JWT token.
 
 ---
 
 ## REST API Endpoints
 
+### Health Check
+
+#### GET `/api`
+
+Check if the server is running.
+
+**Response:**
+
+```json
+"Server is running"
+```
+
+---
+
 ### User Management
 
-#### 1. Register User
-
-**POST** `/api/user/register`
+#### POST `/api/users/register`
 
 Register a new user account.
 
@@ -50,9 +76,9 @@ Register a new user account.
 
 **Validation Rules:**
 
-- `name`: Required, non-empty string
-- `email`: Required, valid email format
-- `password`: Required, minimum 6 characters
+- `email`: Must be a valid email format
+- `password`: Minimum 6 characters
+- `name`: Required, cannot be empty
 
 **Success Response (201):**
 
@@ -63,23 +89,21 @@ Register a new user account.
     "_id": "user_id",
     "name": "John Doe",
     "email": "john@example.com",
-    "createdAt": "2025-01-01T00:00:00.000Z",
-    "updatedAt": "2025-01-01T00:00:00.000Z"
+    "createdAt": "2023-01-01T00:00:00.000Z",
+    "updatedAt": "2023-01-01T00:00:00.000Z"
   },
-  "token": "jwt_token_string"
+  "token": "jwt_token_here"
 }
 ```
 
 **Error Responses:**
 
-- `400`: Validation errors
-- `500`: Server error (e.g., email already exists)
+- **400**: Validation errors
+- **500**: User registration failed (e.g., email already exists)
 
-#### 2. Login User
+#### POST `/api/users/login`
 
-**POST** `/api/user/login`
-
-Authenticate user and receive JWT token.
+Authenticate a user and receive access token.
 
 **Request Body:**
 
@@ -89,6 +113,11 @@ Authenticate user and receive JWT token.
   "password": "password123"
 }
 ```
+
+**Validation Rules:**
+
+- `email`: Must be a valid email format
+- `password`: Required, cannot be empty
 
 **Success Response (200):**
 
@@ -100,23 +129,25 @@ Authenticate user and receive JWT token.
     "name": "John Doe",
     "email": "john@example.com"
   },
-  "token": "jwt_token_string"
+  "token": "jwt_token_here"
 }
 ```
 
 **Error Responses:**
 
-- `400`: Validation errors
-- `401`: Invalid email or password
-- `500`: Server error
+- **400**: Validation errors
+- **401**: Invalid email or password
+- **500**: User login failed
 
-#### 3. Logout User
+#### POST `/api/users/logout`
 
-**POST** `/api/user/logout`
+Logout the current user (clears authentication cookie).
 
-**Authentication:** Required
+**Headers:**
 
-Logout user and clear authentication cookie.
+```
+Authorization: Bearer <token>
+```
 
 **Success Response (200):**
 
@@ -126,13 +157,19 @@ Logout user and clear authentication cookie.
 }
 ```
 
-#### 4. Get User Profile
+**Error Responses:**
 
-**GET** `/api/user/profile`
+- **401**: Unauthorized (invalid/missing token)
 
-**Authentication:** Required
+#### GET `/api/users/profile`
 
-Get current user's profile information.
+Get the current user's profile information.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
 
 **Success Response (200):**
 
@@ -141,30 +178,44 @@ Get current user's profile information.
   "user": {
     "_id": "user_id",
     "name": "John Doe",
-    "email": "john@example.com"
+    "email": "john@example.com",
+    "createdAt": "2023-01-01T00:00:00.000Z",
+    "updatedAt": "2023-01-01T00:00:00.000Z"
   }
 }
 ```
+
+**Error Responses:**
+
+- **401**: Unauthorized (invalid/missing token)
 
 ---
 
 ### Conversation Management
 
-#### 5. Create Conversation
+> **Note**: All conversation endpoints require authentication.
 
-**POST** `/api/conversation`
-
-**Authentication:** Required
+#### POST `/api/conversations`
 
 Create a new conversation.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
 
 **Request Body:**
 
 ```json
 {
-  "title": "My Chat Session"
+  "title": "My New Conversation"
 }
 ```
+
+**Validation Rules:**
+
+- `title`: Required, cannot be empty, max 100 characters
 
 **Success Response (201):**
 
@@ -172,19 +223,27 @@ Create a new conversation.
 {
   "_id": "conversation_id",
   "user": "user_id",
-  "title": "My Chat Session",
-  "createdAt": "2025-01-01T00:00:00.000Z",
-  "updatedAt": "2025-01-01T00:00:00.000Z"
+  "title": "My New Conversation",
+  "createdAt": "2023-01-01T00:00:00.000Z",
+  "updatedAt": "2023-01-01T00:00:00.000Z"
 }
 ```
 
-#### 6. Get All Conversations
+**Error Responses:**
 
-**GET** `/api/conversation`
+- **400**: Validation errors
+- **401**: Unauthorized
+- **500**: Internal server error
 
-**Authentication:** Required
+#### GET `/api/conversations`
 
 Get all conversations for the authenticated user.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
 
 **Success Response (200):**
 
@@ -193,27 +252,34 @@ Get all conversations for the authenticated user.
   {
     "_id": "conversation_id_1",
     "user": "user_id",
-    "title": "First Chat",
-    "createdAt": "2025-01-01T00:00:00.000Z",
-    "updatedAt": "2025-01-01T00:00:00.000Z"
+    "title": "First Conversation",
+    "createdAt": "2023-01-01T00:00:00.000Z",
+    "updatedAt": "2023-01-01T00:00:00.000Z"
   },
   {
     "_id": "conversation_id_2",
     "user": "user_id",
-    "title": "Second Chat",
-    "createdAt": "2025-01-01T01:00:00.000Z",
-    "updatedAt": "2025-01-01T01:00:00.000Z"
+    "title": "Second Conversation",
+    "createdAt": "2023-01-02T00:00:00.000Z",
+    "updatedAt": "2023-01-02T00:00:00.000Z"
   }
 ]
 ```
 
-#### 7. Get Conversation by ID
+**Error Responses:**
 
-**GET** `/api/conversation/:id`
+- **401**: Unauthorized
+- **500**: Internal server error
 
-**Authentication:** Required
+#### GET `/api/conversations/:id`
 
-Get a specific conversation by its ID.
+Get a specific conversation by ID.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
 
 **URL Parameters:**
 
@@ -225,56 +291,27 @@ Get a specific conversation by its ID.
 {
   "_id": "conversation_id",
   "user": "user_id",
-  "title": "My Chat Session",
-  "createdAt": "2025-01-01T00:00:00.000Z",
-  "updatedAt": "2025-01-01T00:00:00.000Z"
+  "title": "My Conversation",
+  "createdAt": "2023-01-01T00:00:00.000Z",
+  "updatedAt": "2023-01-01T00:00:00.000Z"
 }
 ```
 
 **Error Responses:**
 
-- `404`: Conversation not found
+- **401**: Unauthorized
+- **404**: Conversation not found
+- **500**: Internal server error
 
-#### 8. Send Message
+#### GET `/api/conversations/:id/messages`
 
-**POST** `/api/conversation/:id/messages`
+Get all messages in a specific conversation.
 
-**Authentication:** Required
+**Headers:**
 
-Send a message to a conversation (mainly for manual message creation).
-
-**URL Parameters:**
-
-- `id`: Conversation ID
-
-**Request Body:**
-
-```json
-{
-  "sender": "user", // "user" or "model"
-  "content": "Hello, how are you?"
-}
 ```
-
-**Success Response (201):**
-
-```json
-{
-  "_id": "message_id",
-  "conversation": "conversation_id",
-  "sender": "user",
-  "content": "Hello, how are you?",
-  "timestamp": "2025-01-01T00:00:00.000Z"
-}
+Authorization: Bearer <token>
 ```
-
-#### 9. Get Messages
-
-**GET** `/api/conversation/:id/messages`
-
-**Authentication:** Required
-
-Get all messages for a specific conversation.
 
 **URL Parameters:**
 
@@ -289,56 +326,119 @@ Get all messages for a specific conversation.
     "conversation": "conversation_id",
     "sender": "user",
     "content": "Hello, how are you?",
-    "timestamp": "2025-01-01T00:00:00.000Z"
+    "timestamp": "2023-01-01T00:00:00.000Z"
   },
   {
     "_id": "message_id_2",
     "conversation": "conversation_id",
     "sender": "model",
-    "content": "Hello! I'm doing well, thank you for asking. How can I help you today?",
-    "timestamp": "2025-01-01T00:00:01.000Z"
+    "content": "I'm doing well, thank you! How can I help you today?",
+    "timestamp": "2023-01-01T00:01:00.000Z"
   }
 ]
 ```
+
+**Error Responses:**
+
+- **401**: Unauthorized
+- **500**: Internal server error
+
+#### POST `/api/conversations/:id/messages`
+
+Send a message to a specific conversation.
+
+**Headers:**
+
+```
+Authorization: Bearer <token>
+```
+
+**URL Parameters:**
+
+- `id`: Conversation ID
+
+**Request Body:**
+
+```json
+{
+  "sender": "user",
+  "content": "Hello, how are you?"
+}
+```
+
+**Validation Rules:**
+
+- `sender`: Required, must be either "user" or "model"
+- `content`: Required, cannot be empty
+
+**Success Response (201):**
+
+```json
+{
+  "_id": "message_id",
+  "conversation": "conversation_id",
+  "sender": "user",
+  "content": "Hello, how are you?",
+  "timestamp": "2023-01-01T00:00:00.000Z"
+}
+```
+
+**Error Responses:**
+
+- **400**: Validation errors
+- **401**: Unauthorized
+- **500**: Internal server error
 
 ---
 
 ## WebSocket API (Socket.IO)
 
+The server uses Socket.IO for real-time chat functionality with AI streaming responses.
+
 ### Connection
 
-**Endpoint:** `ws://localhost:3000`
-
-**Authentication:** Required via token in handshake
-
 ```javascript
+import io from "socket.io-client";
+
 const socket = io("http://localhost:3000", {
   auth: {
-    token: "your_jwt_token",
+    token: "your-jwt-token",
   },
 });
 ```
 
+### Authentication
+
+WebSocket connections require JWT authentication via:
+
+- `auth.token` in handshake
+- `token` query parameter
+
 ### Events
 
-#### Client to Server Events
+#### Client to Server
 
-##### 1. message
+##### `message`
 
-Send a message and get AI response with real-time streaming.
+Send a message to get AI response.
 
 **Payload:**
 
 ```json
 {
   "conversationId": "conversation_id",
-  "prompt": "Tell me a joke"
+  "prompt": "What is the weather like today?"
 }
 ```
 
-#### Server to Client Events
+**Requirements:**
 
-##### 1. message_saved
+- `conversationId`: Required, must be a valid conversation ID owned by the user
+- `prompt`: Required, cannot be empty
+
+#### Server to Client
+
+##### `message_saved`
 
 Emitted when user message is successfully saved.
 
@@ -349,14 +449,14 @@ Emitted when user message is successfully saved.
   "_id": "message_id",
   "conversation": "conversation_id",
   "sender": "user",
-  "content": "Tell me a joke",
-  "timestamp": "2025-01-01T00:00:00.000Z"
+  "content": "What is the weather like today?",
+  "timestamp": "2023-01-01T00:00:00.000Z"
 }
 ```
 
-##### 2. stream_start
+##### `stream_start`
 
-Emitted when AI starts generating response.
+Emitted when AI response streaming begins.
 
 **Payload:**
 
@@ -366,7 +466,7 @@ Emitted when AI starts generating response.
 }
 ```
 
-##### 3. stream_chunk
+##### `stream_chunk`
 
 Emitted for each chunk of AI response during streaming.
 
@@ -374,15 +474,15 @@ Emitted for each chunk of AI response during streaming.
 
 ```json
 {
-  "chunk": "Why don't scientists trust atoms?",
+  "chunk": "This is a part of the AI response...",
   "conversationId": "conversation_id",
-  "timestamp": "2025-01-01T00:00:00.000Z"
+  "timestamp": "2023-01-01T00:00:00.000Z"
 }
 ```
 
-##### 4. stream_end
+##### `stream_end`
 
-Emitted when AI finishes streaming response.
+Emitted when AI response streaming is complete.
 
 **Payload:**
 
@@ -392,243 +492,299 @@ Emitted when AI finishes streaming response.
 }
 ```
 
-##### 5. response
+##### `response`
 
-Emitted with complete AI response and saved message.
+Emitted with the complete AI response after streaming ends.
 
 **Payload:**
 
 ```json
 {
-  "text": "Why don't scientists trust atoms? Because they make up everything!",
+  "text": "Complete AI response text...",
   "message": {
     "_id": "message_id",
     "conversation": "conversation_id",
     "sender": "model",
-    "content": "Why don't scientists trust atoms? Because they make up everything!",
-    "timestamp": "2025-01-01T00:00:01.000Z"
+    "content": "Complete AI response text...",
+    "timestamp": "2023-01-01T00:00:00.000Z"
   },
   "conversationId": "conversation_id"
 }
 ```
 
-##### 6. error
+##### `error`
 
 Emitted when an error occurs.
 
 **Payload:**
 
 ```json
-"Error message string"
+"Error message describing what went wrong"
 ```
 
-**Common Error Messages:**
+**Common Error Types:**
 
-- "Missing conversationId"
-- "Missing prompt/content"
-- "Access denied: [reason]"
-- "Failed to save message"
-- "AI service rate limit exceeded. Please try again later."
-- "AI service is currently unavailable. Please try again later."
+- Authentication errors
+- Missing required fields
+- Conversation ownership verification failures
+- AI service errors (rate limits, service unavailable)
+- Database errors
+
+### Connection Events
+
+##### `connect`
+
+Emitted when client successfully connects.
+
+##### `disconnect`
+
+Emitted when client disconnects.
 
 ---
 
 ## Data Models
 
-### User
+### User Model
 
 ```json
 {
   "_id": "ObjectId",
-  "name": "string (required)",
-  "email": "string (required, unique, valid email)",
-  "password": "string (required, hashed)",
+  "name": "String (required)",
+  "email": "String (required, unique, valid email)",
+  "password": "String (required, hashed)",
   "createdAt": "Date",
   "updatedAt": "Date"
 }
 ```
 
-### Conversation
+### Conversation Model
 
 ```json
 {
   "_id": "ObjectId",
   "user": "ObjectId (ref: User, required)",
-  "title": "string (required, 1-100 characters)",
+  "title": "String (required, 1-100 chars)",
   "createdAt": "Date",
   "updatedAt": "Date"
 }
 ```
 
-### Message
+### Message Model
 
 ```json
 {
   "_id": "ObjectId",
   "conversation": "ObjectId (ref: Conversation, required)",
-  "sender": "string (enum: ['user', 'model'], required)",
-  "content": "string (required)",
-  "timestamp": "Date (default: Date.now)"
+  "sender": "String (enum: ['user', 'model'], required)",
+  "content": "String (required)",
+  "timestamp": "Date (default: now)"
 }
 ```
 
 ---
 
+## AI Integration
+
+### Google Gemini AI
+
+- **Model**: gemini-2.5-flash
+- **Streaming**: Supported for real-time responses
+- **Embeddings**: gemini-embedding-001 (768 dimensions)
+- **System Instructions**: Dynamic based on long-term memory
+
+### Pinecone Vector Database
+
+- **Purpose**: Long-term memory storage and retrieval
+- **Embeddings**: 768-dimensional vectors
+- **Metadata**: Stores userId, conversationId, and text content
+- **Queries**: Semantic similarity search with user-specific filtering
+
+### Memory System
+
+1. **Short-term Memory**: Recent conversation history from MongoDB
+2. **Long-term Memory**: Semantic search results from Pinecone
+3. **Automatic Embedding**: All messages are automatically embedded and stored
+
+---
+
 ## Error Handling
 
-### Common HTTP Status Codes
+### HTTP Status Codes
 
-- `200`: Success
-- `201`: Created
-- `400`: Bad Request (validation errors)
-- `401`: Unauthorized (invalid credentials)
-- `403`: Forbidden (access denied)
-- `404`: Not Found
-- `500`: Internal Server Error
+- **200**: Success
+- **201**: Created
+- **400**: Bad Request (validation errors)
+- **401**: Unauthorized (authentication required/failed)
+- **404**: Not Found
+- **500**: Internal Server Error
 
 ### Error Response Format
 
 ```json
 {
   "message": "Error description",
-  "error": "Detailed error message",
+  "error": "Detailed error message (if applicable)",
   "errors": [
     {
       "field": "email",
-      "message": "Invalid email"
+      "message": "Invalid email format"
     }
   ]
 }
 ```
 
----
+### WebSocket Error Handling
 
-## Environment Variables
-
-```env
-NODE_ENV=development
-PORT=3000
-MONGODB_URI=mongodb://localhost:27017/chatgpt
-JWT_SECRET=your_jwt_secret
-GOOGLE_AI_API_KEY=your_google_ai_api_key
-PINECONE_API_KEY=your_pinecone_api_key
-```
+- Authentication errors during handshake
+- Runtime errors emitted via `error` event
+- Automatic reconnection supported by Socket.IO client
 
 ---
 
-## Features Implemented
+## Security Features
 
-### ✅ Current Features
+### Authentication
 
-- User registration and authentication
-- JWT-based session management with HTTP-only cookies
-- Conversation creation and management
-- Real-time messaging with Socket.IO
-- AI response generation with streaming
-- Message history storage
-- Vector embeddings for long-term memory
-- Conversation ownership verification
-- Input validation and error handling
+- JWT tokens with 7-day expiration
+- HTTP-only cookies for web clients
+- Token verification middleware
 
-### 🚀 Frontend Integration Examples
+### Password Security
 
-#### Authentication Flow
+- bcryptjs hashing with salt rounds (10)
+- Password comparison method in User model
+
+### CORS Configuration
 
 ```javascript
-// Register
-const response = await fetch("/api/user/register", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  credentials: "include", // Important for cookies
-  body: JSON.stringify({
-    name: "John Doe",
-    email: "john@example.com",
-    password: "password123",
-  }),
-});
-
-// Login
-const loginResponse = await fetch("/api/user/login", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  credentials: "include",
-  body: JSON.stringify({
-    email: "john@example.com",
-    password: "password123",
-  }),
-});
+{
+  origin: "http://localhost:5173",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
+}
 ```
 
-#### Socket Connection and Chat
+### Environment-based Security
+
+- Secure cookies in production
+- SameSite protection
+- Required environment variables validation
+
+---
+
+## Rate Limiting & Performance
+
+### AI Service
+
+- Handles rate limiting with appropriate error messages
+- Streaming responses for better user experience
+- Parallel processing of embeddings and message saving
+
+### Database
+
+- MongoDB connection with error handling
+- Optimized queries for conversation history
+- Indexed fields for better performance
+
+---
+
+## Development Setup
+
+1. **Install Dependencies:**
+
+   ```bash
+   npm install
+   ```
+
+2. **Environment Variables:**
+   Copy `.env.example` to `.env` and fill in the values.
+
+3. **Start Development Server:**
+
+   ```bash
+   npm run dev
+   ```
+
+4. **Start Production Server:**
+   ```bash
+   npm start
+   ```
+
+---
+
+## Testing Endpoints
+
+### Using cURL
+
+#### Register User
+
+```bash
+curl -X POST http://localhost:3000/api/users/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"John Doe","email":"john@example.com","password":"password123"}'
+```
+
+#### Login User
+
+```bash
+curl -X POST http://localhost:3000/api/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"john@example.com","password":"password123"}' \
+  -c cookies.txt
+```
+
+#### Create Conversation
+
+```bash
+curl -X POST http://localhost:3000/api/conversations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"title":"Test Conversation"}'
+```
+
+### Using Socket.IO Client
 
 ```javascript
-import io from "socket.io-client";
-
-// Connect with JWT token
 const socket = io("http://localhost:3000", {
-  auth: {
-    token: localStorage.getItem("token"), // or get from response
-  },
+  auth: { token: "your-jwt-token" },
 });
 
-// Handle connection events
 socket.on("connect", () => {
   console.log("Connected to server");
-});
 
-// Send message
-const sendMessage = (conversationId, prompt) => {
   socket.emit("message", {
-    conversationId,
-    prompt,
+    conversationId: "conversation_id",
+    prompt: "Hello, how are you?",
   });
-};
-
-// Handle streaming responses
-socket.on("stream_start", (data) => {
-  console.log("AI started responding for conversation:", data.conversationId);
 });
 
 socket.on("stream_chunk", (data) => {
-  // Append chunk to UI
-  appendToChat(data.chunk);
-});
-
-socket.on("stream_end", (data) => {
-  console.log("AI finished responding");
+  console.log("AI Response Chunk:", data.chunk);
 });
 
 socket.on("response", (data) => {
-  console.log("Complete response:", data.text);
-  // Save message ID, update UI, etc.
-});
-
-socket.on("error", (error) => {
-  console.error("Socket error:", error);
+  console.log("Complete AI Response:", data.text);
 });
 ```
 
 ---
 
-## Rate Limiting & Best Practices
+## Deployment Notes
 
-### Recommendations for Frontend
+### Production Environment Variables
 
-1. **Connection Management**: Maintain single socket connection per user session
-2. **Error Handling**: Implement reconnection logic for socket disconnections
-3. **Loading States**: Show loading indicators during stream_start and stream_end
-4. **Message Queuing**: Queue messages if socket is disconnected
-5. **Token Management**: Store JWT securely and handle token expiration
-6. **Real-time UI**: Update chat interface progressively with stream_chunk events
+- Set `NODE_ENV=production`
+- Use secure JWT_SECRET
+- Configure production MongoDB URI
+- Set up proper CORS origins
+- Use HTTPS for secure cookies
 
-### Security Considerations
+### Dependencies
 
-1. Tokens are HTTP-only cookies (XSS protection)
-2. Conversation ownership verification
-3. Input validation on all endpoints
-4. Rate limiting recommended for production
-5. CORS configuration for allowed origins
+- Node.js 18+ recommended
+- MongoDB 4.4+
+- Active Google Gemini API key
+- Active Pinecone account and API key
+
+This documentation covers all the REST API endpoints, WebSocket events, data models, and integration details for the ChatGPT server application.
