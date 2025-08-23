@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState, useRef } from "react";
 import { AuthModalContext } from "../context/AuthModalContext";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { SocketContext } from "../context/SocketContext";
 import MarkdownRenderer from "./MarkdownRenderer";
 
@@ -18,12 +18,17 @@ const ChatApp = () => {
   const chatContainerRef = useRef(null);
 
   const { id } = useParams();
-  const { openAuthModal, isAuthenticated, getCurrentMessages } =
-    useContext(AuthModalContext);
+  const {
+    openAuthModal,
+    isAuthenticated,
+    getCurrentMessages,
+    createConversation,
+  } = useContext(AuthModalContext);
 
   const { socket, isSocketConnected } = useContext(SocketContext);
 
-  // Simple scroll to bottom function
+  const navigate = useNavigate();
+
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({
@@ -33,131 +38,126 @@ const ChatApp = () => {
     }
   };
 
-  // Check if user is near bottom of chat
   const isNearBottom = () => {
     if (!chatContainerRef.current) return true;
-
     const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
-    const threshold = 100; // pixels from bottom
-    return scrollHeight - scrollTop - clientHeight < threshold;
+    return scrollHeight - scrollTop - clientHeight < 100;
   };
 
-  // Handle scroll events to show/hide scroll button
   const handleScroll = () => {
     if (!chatContainerRef.current) return;
-
-    const nearBottom = isNearBottom();
-    setShowScrollButton(!nearBottom);
+    setShowScrollButton(!isNearBottom());
   };
 
   const handleInputChange = (e) => {
     setInputValue(e.target.value);
   };
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
-
-    if (!isAuthenticated) {
-      openAuthModal();
-      return;
-    }
-
-    // Prevent sending if already processing a message (streaming, typing, or has pending message)
-    if (isStreaming || isTyping || pendingUserMessage || isBusy) {
-      return;
-    }
-
-    if (!inputValue.trim()) {
-      return;
-    }
+    if (!isAuthenticated) return openAuthModal();
+    if (isStreaming || isTyping || pendingUserMessage || isBusy) return;
+    if (!inputValue.trim()) return;
 
     if (isSocketConnected && socket) {
-      setIsBusy(true); // Set busy state to prevent multiple sends
+      setIsBusy(true);
+      const userMessage = inputValue.trim();
+      setPendingUserMessage(userMessage);
+      setInputValue("");
 
-      // Set pending user message
-      setPendingUserMessage(inputValue.trim());
+      let conversationId = id;
 
-      // Emit message event according to API docs
+      if (!conversationId) {
+        // Generate a title from the first user message (e.g., first 6 words or 40 chars)
+        const generateTitle = (text) => {
+          const words = text.trim().split(/\s+/).slice(0, 6).join(" ");
+          return words.length > 40 ? words.slice(0, 40) + "..." : words;
+        };
+        const newConversation = await createConversation({
+          title: generateTitle(userMessage),
+        });
+        conversationId = newConversation._id;
+        navigate(`/c/${conversationId}`);
+      }
+
       socket.emit("message", {
-        conversationId: id,
-        prompt: inputValue,
+        conversationId,
+        prompt: userMessage,
       });
 
-      setInputValue(""); // Clear input after sending
-
-      // Scroll to bottom when user sends a message
-      setTimeout(() => {
-        if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({
-            behavior: "smooth",
-            block: "end",
-          });
-        }
-      }, 100);
+      setTimeout(scrollToBottom, 100);
     }
   };
 
-  // Socket event listeners
+  const lastMessage =
+    conversations.length > 0 ? conversations[conversations.length - 1] : null;
+
+  const shouldRenderPending =
+    pendingUserMessage &&
+    id &&
+    !(
+      lastMessage &&
+      lastMessage.sender === "user" &&
+      lastMessage.content.trim() === pendingUserMessage.trim()
+    );
+
+  // Memoized event handlers to avoid re-registering on every render
+  const handleMessageSaved = React.useCallback(
+    (data) => {
+      setConversations((prev) => {
+        const exists = prev.some((msg) => msg._id === data._id);
+        return exists ? prev : [...prev, data];
+      });
+      if (
+        data.sender === "user" &&
+        data.content.trim() === pendingUserMessage.trim()
+      ) {
+        setPendingUserMessage("");
+      }
+    },
+    [pendingUserMessage],
+  );
+
+  const handleStreamStart = React.useCallback(() => {
+    setIsStreaming(true);
+    setStreamingMessage("");
+    setTimeout(scrollToBottom, 100);
+  }, []);
+
+  const handleStreamChunk = React.useCallback((data) => {
+    setStreamingMessage((prev) => prev + data.chunk);
+    setTimeout(scrollToBottom, 50);
+  }, []);
+
+  const handleStreamEnd = React.useCallback(() => {
+    setIsStreaming(false);
+    setStreamingMessage("");
+    setIsTyping(true);
+  }, []);
+
+  const handleResponse = React.useCallback((data) => {
+    setConversations((prev) => {
+      const exists = prev.some((msg) => msg._id === data.message._id);
+      return exists ? prev : [...prev, data.message];
+    });
+    setIsStreaming(false);
+    setStreamingMessage("");
+    setIsTyping(false);
+    setIsBusy(false);
+    setTimeout(scrollToBottom, 100);
+  }, []);
+
+  const handleError = React.useCallback((error) => {
+    console.error("Socket error:", error);
+    setIsStreaming(false);
+    setStreamingMessage("");
+    setIsTyping(false);
+    setIsBusy(false);
+  }, []);
+
   useEffect(() => {
     if (!socket || !isSocketConnected) return;
 
-    // Handle message_saved event
-    const handleMessageSaved = (data) => {
-      setConversations((prev) => [...prev, data]);
-      setPendingUserMessage(""); // Clear pending user message when saved
-    };
-
-    // Handle stream_start event
-    const handleStreamStart = () => {
-      setIsStreaming(true);
-      setStreamingMessage("");
-      // Scroll to bottom when streaming starts
-      setTimeout(scrollToBottom, 100);
-    };
-
-    // Handle stream_chunk event
-    const handleStreamChunk = (data) => {
-      setStreamingMessage((prev) => prev + data.chunk);
-      // Scroll to bottom as content streams in
-      setTimeout(scrollToBottom, 50);
-    };
-
-    // Handle stream_end event
-    const handleStreamEnd = () => {
-      setIsStreaming(false);
-      setStreamingMessage("");
-      setIsTyping(true); // Show typing indicator after stream ends
-    };
-
-    // Handle complete response
-    const handleResponse = (data) => {
-      setConversations((prev) => [...prev, data.message]);
-      setIsStreaming(false);
-      setStreamingMessage("");
-      setIsTyping(false); // Hide typing indicator when response received
-      setIsBusy(false); // Reset busy state after response
-
-      // Scroll to bottom when AI sends a response
-      setTimeout(() => {
-        if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({
-            behavior: "smooth",
-            block: "end",
-          });
-        }
-      }, 100);
-    };
-
-    // Handle errors
-    const handleError = (error) => {
-      console.error("Socket error:", error);
-      setIsStreaming(false);
-      setStreamingMessage("");
-      setIsTyping(false); // Hide typing indicator on error
-      setIsBusy(false); // Reset busy state on error
-    };
-
-    // Register event listeners
     socket.on("message_saved", handleMessageSaved);
     socket.on("stream_start", handleStreamStart);
     socket.on("stream_chunk", handleStreamChunk);
@@ -165,7 +165,6 @@ const ChatApp = () => {
     socket.on("response", handleResponse);
     socket.on("error", handleError);
 
-    // Cleanup listeners on unmount or socket change
     return () => {
       socket.off("message_saved", handleMessageSaved);
       socket.off("stream_start", handleStreamStart);
@@ -174,20 +173,36 @@ const ChatApp = () => {
       socket.off("response", handleResponse);
       socket.off("error", handleError);
     };
-  }, [socket, isSocketConnected]);
+  }, [
+    socket,
+    isSocketConnected,
+    handleMessageSaved,
+    handleStreamStart,
+    handleStreamChunk,
+    handleStreamEnd,
+    handleResponse,
+    handleError,
+  ]);
 
   useEffect(() => {
     if (!id) {
       setConversations([]);
-      setPendingUserMessage(""); // Clear pending message when no conversation
-      setIsTyping(false); // Clear typing indicator when no conversation
+      setPendingUserMessage("");
       return;
     }
+
     const fetchConversations = async () => {
       const data = await getCurrentMessages(id);
-      setConversations(data);
-      setPendingUserMessage(""); // Clear pending message when switching conversations
-      setIsTyping(false); // Clear typing indicator when switching conversations
+      setConversations((prev) => {
+        const map = new Map();
+        // Add previous messages
+        prev.forEach((msg) => map.set(msg._id, msg));
+        // Add new messages
+        data.forEach((msg) => map.set(msg._id, msg));
+        return Array.from(map.values());
+      });
+      setPendingUserMessage("");
+      setIsTyping(false);
     };
 
     fetchConversations();
@@ -212,7 +227,7 @@ const ChatApp = () => {
         onScroll={handleScroll}
         className="relative flex h-full w-full flex-col gap-4 overflow-y-auto scroll-smooth px-12 py-4"
       >
-        {conversations?.length > 0 ||
+        {conversations.length > 0 ||
         isStreaming ||
         pendingUserMessage ||
         isTyping ? (
@@ -233,33 +248,33 @@ const ChatApp = () => {
                 )}
               </div>
             ))}
-            {pendingUserMessage && (
+
+            {shouldRenderPending && (
               <p className="bg-dark-100/50 animate-pulse self-end rounded-xl rounded-tr-[0] px-5 py-3 opacity-70">
                 {pendingUserMessage}
-                <span className="animate-pulse">|</span>
               </p>
             )}
+
             {isStreaming && streamingMessage && (
               <p className="bg-dark-100/50 animate-pulse self-start rounded-xl rounded-tl-[0] px-5 py-3 opacity-70">
                 {streamingMessage}
-                <span className="animate-pulse">|</span>
               </p>
             )}
+
             {isTyping && !isStreaming && (
               <p className="bg-dark-100/50 animate-pulse self-start rounded-xl rounded-tl-[0] px-5 py-3 opacity-70">
                 Thinking...
               </p>
             )}
-            {/* Invisible element to scroll to */}
+
             <div ref={messagesEndRef} />
           </>
         ) : (
           <h2 className="absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] text-4xl text-white/80">
-            What's on your mind?
+            What&apos;s on your mind?
           </h2>
         )}
 
-        {/* Scroll to bottom button */}
         {showScrollButton && (
           <button
             onClick={scrollToBottom}
