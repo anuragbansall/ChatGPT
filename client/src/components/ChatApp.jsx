@@ -3,8 +3,9 @@ import { AuthModalContext } from "../context/AuthModalContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { SocketContext } from "../context/SocketContext";
 import MarkdownRenderer from "./MarkdownRenderer";
+import { HiMenu } from "react-icons/hi";
 
-const ChatApp = () => {
+const ChatApp = ({ onToggleSidebar, isSidebarOpen }) => {
   const [inputValue, setInputValue] = useState("");
   const [conversations, setConversations] = useState([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -212,11 +213,21 @@ const ChatApp = () => {
 
   return (
     <section className="bg-dark-200 flex h-full w-full flex-col text-white">
-      <div className="flex items-center justify-between border-b border-neutral-700 px-6 py-4">
-        <h1 className="text-2xl font-semibold">ChatGPT</h1>
+      <div className="flex items-center justify-between border-b border-neutral-700 px-4 py-4 sm:px-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          {/* Mobile hamburger menu */}
+          <button
+            onClick={onToggleSidebar}
+            className="hover:bg-dark-100/30 rounded-md p-2 transition-colors duration-200 lg:hidden"
+            aria-label={isSidebarOpen ? "Close menu" : "Open menu"}
+          >
+            <HiMenu className="text-xl text-white" />
+          </button>
+          <h1 className="text-xl font-semibold sm:text-2xl">ChatGPT</h1>
+        </div>
         {!isAuthenticated && (
           <button
-            className="cursor-pointer rounded-full bg-white/80 px-4 py-2 text-black transition-colors duration-200 hover:bg-white/100"
+            className="cursor-pointer rounded-full bg-white/80 px-3 py-2 text-sm text-black transition-colors duration-200 hover:bg-white/100 sm:px-4 sm:text-base"
             onClick={openAuthModal}
           >
             Login
@@ -227,7 +238,7 @@ const ChatApp = () => {
       <div
         ref={chatContainerRef}
         onScroll={handleScroll}
-        className="relative flex h-full w-full flex-col gap-4 overflow-y-auto scroll-smooth px-12 py-4"
+        className="relative flex h-full w-full flex-col gap-4 overflow-y-auto scroll-smooth px-4 py-4 sm:px-8 lg:px-12"
       >
         {conversations.length > 0 ||
         isStreaming ||
@@ -241,7 +252,7 @@ const ChatApp = () => {
                   item.sender === "user"
                     ? "self-end rounded-tr-[0]"
                     : "self-start rounded-tl-[0]"
-                } bg-dark-100/50 max-w-prose rounded-xl px-5 py-3 leading-relaxed`}
+                } bg-dark-100/50 max-w-[85%] rounded-xl px-5 py-3 leading-relaxed sm:max-w-prose`}
               >
                 {item.sender === "user" ? (
                   <p>{item.content}</p>
@@ -252,19 +263,19 @@ const ChatApp = () => {
             ))}
 
             {shouldRenderPending && (
-              <p className="bg-dark-100/50 animate-pulse self-end rounded-xl rounded-tr-[0] px-5 py-3 opacity-70">
+              <p className="bg-dark-100/50 max-w-[85%] animate-pulse self-end rounded-xl rounded-tr-[0] px-5 py-3 opacity-70 sm:max-w-prose">
                 {pendingUserMessage}
               </p>
             )}
 
             {isStreaming && streamingMessage && (
-              <p className="bg-dark-100/50 animate-pulse self-start rounded-xl rounded-tl-[0] px-5 py-3 opacity-70">
+              <p className="bg-dark-100/50 max-w-[85%] animate-pulse self-start rounded-xl rounded-tl-[0] px-5 py-3 opacity-70 sm:max-w-prose">
                 {streamingMessage}
               </p>
             )}
 
             {isTyping && !isStreaming && (
-              <p className="bg-dark-100/50 animate-pulse self-start rounded-xl rounded-tl-[0] px-5 py-3 opacity-70">
+              <p className="bg-dark-100/50 max-w-[85%] animate-pulse self-start rounded-xl rounded-tl-[0] px-5 py-3 opacity-70 sm:max-w-prose">
                 Thinking...
               </p>
             )}
@@ -272,7 +283,7 @@ const ChatApp = () => {
             <div ref={messagesEndRef} />
           </>
         ) : (
-          <h2 className="absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] text-4xl text-white/80">
+          <h2 className="absolute top-1/2 left-1/2 translate-x-[-50%] translate-y-[-50%] px-4 text-center text-2xl text-white/80 sm:text-4xl">
             What&apos;s on your mind?
           </h2>
         )}
@@ -280,7 +291,7 @@ const ChatApp = () => {
         {showScrollButton && (
           <button
             onClick={scrollToBottom}
-            className="bg-dark-100 hover:bg-dark-200 fixed right-8 bottom-24 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-neutral-600 text-white shadow-lg transition-all duration-200 hover:scale-105"
+            className="bg-dark-100 hover:bg-dark-200 fixed right-4 bottom-24 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-neutral-600 text-white shadow-lg transition-all duration-200 hover:scale-105 sm:right-8"
             aria-label="Scroll to bottom"
           >
             <svg
@@ -302,7 +313,7 @@ const ChatApp = () => {
       </div>
 
       <form
-        className={`group mx-auto my-4 flex max-w-full items-center gap-2 rounded-full p-3 transition-all duration-300 ${
+        className={`group mx-4 my-4 flex max-w-full items-center gap-2 rounded-full p-3 transition-all duration-300 sm:mx-auto sm:max-w-4xl ${
           isStreaming || isTyping || pendingUserMessage || isBusy
             ? "glowing-bg"
             : "bg-dark-100 border border-neutral-500"
@@ -319,7 +330,7 @@ const ChatApp = () => {
           <input
             type="text"
             placeholder="Enter your text here"
-            className="w-full border-none bg-transparent px-4 text-lg text-white outline-0 transition-all duration-200 focus:w-xl"
+            className="w-full border-none bg-transparent px-4 text-base text-white outline-0 transition-all duration-200 focus:w-xl sm:text-lg"
             value={inputValue}
             onChange={handleInputChange}
             disabled={isStreaming || isTyping || pendingUserMessage || isBusy}
@@ -333,7 +344,7 @@ const ChatApp = () => {
               isBusy ||
               !inputValue.trim()
             }
-            className={`cursor-pointer rounded-full px-6 py-2 text-white transition-colors duration-200 ${
+            className={`cursor-pointer rounded-full px-4 py-2 text-sm text-white transition-colors duration-200 sm:px-6 sm:text-base ${
               isStreaming ||
               isTyping ||
               pendingUserMessage ||

@@ -1,10 +1,10 @@
 import React, { useContext } from "react";
 import { RiChatNewLine } from "react-icons/ri";
-import { MdOutlineLogout } from "react-icons/md";
+import { MdOutlineLogout, MdClose } from "react-icons/md";
 import { AuthModalContext } from "../context/AuthModalContext";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
-const SideChatHistory = () => {
+const SideChatHistory = ({ onClose }) => {
   const navigate = useNavigate();
   const {
     logout,
@@ -22,9 +22,16 @@ const SideChatHistory = () => {
       const newConversation = await createConversation({ title: "New Chat" });
       // Navigate to the new conversation
       navigate(`/c/${newConversation._id}`);
+      // Close sidebar on mobile after navigation
+      if (onClose) onClose();
     } catch (error) {
       console.error("Error creating new conversation:", error);
     }
+  };
+
+  const handleLinkClick = () => {
+    // Close sidebar on mobile after navigation
+    if (onClose) onClose();
   };
 
   const options = [
@@ -37,8 +44,18 @@ const SideChatHistory = () => {
 
   return (
     <aside className="bg-dark-300 flex h-full w-full flex-col gap-2 px-6 py-4 text-white">
-      <div className="flex items-center">
+      <div className="flex items-center justify-between">
         <h1 className="py-4 text-2xl font-semibold">ChatGPT</h1>
+        {/* Close button for mobile */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="hover:bg-dark-100/30 rounded-md p-2 transition-colors duration-200 lg:hidden"
+            aria-label="Close sidebar"
+          >
+            <MdClose className="text-xl text-white" />
+          </button>
+        )}
       </div>
 
       <div className="flex w-full flex-col">
@@ -60,6 +77,7 @@ const SideChatHistory = () => {
             <Link
               key={item._id}
               to={`/c/${item._id}`}
+              onClick={handleLinkClick}
               className={`hover:bg-dark-100/30 w-full shrink-0 cursor-pointer overflow-hidden rounded-md px-4 py-3 text-nowrap text-ellipsis text-white/80 capitalize transition-colors duration-200 ${item._id === id ? "bg-dark-100" : ""}`}
             >
               {item.title}
