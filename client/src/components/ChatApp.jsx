@@ -76,6 +76,11 @@ const ChatApp = () => {
         const newConversation = await createConversation({
           title: generateTitle(userMessage),
         });
+
+        setPendingUserMessage("");
+        setStreamingMessage("");
+        setIsTyping(false);
+
         conversationId = newConversation._id;
         navigate(`/c/${conversationId}`);
       }
@@ -193,15 +198,12 @@ const ChatApp = () => {
 
     const fetchConversations = async () => {
       const data = await getCurrentMessages(id);
-      setConversations((prev) => {
-        const map = new Map();
-        // Add previous messages
-        prev.forEach((msg) => map.set(msg._id, msg));
-        // Add new messages
-        data.forEach((msg) => map.set(msg._id, msg));
-        return Array.from(map.values());
-      });
-      setPendingUserMessage("");
+      setConversations(data);
+      // Deduplicate messages by _id to prevent duplicates
+      const uniqueMessages = Array.from(
+        new Map(data.map((msg) => [msg._id, msg])).values(),
+      );
+      setConversations(uniqueMessages);
       setIsTyping(false);
     };
 
