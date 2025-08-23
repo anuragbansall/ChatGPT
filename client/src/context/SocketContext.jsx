@@ -1,4 +1,10 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import { io } from "socket.io-client";
 import { AuthModalContext } from "./AuthModalContext";
 
@@ -12,25 +18,25 @@ export const SocketProvider = ({ children }) => {
 
   console.log(socketUserId, isSocketConnected);
 
-  const connectSocket = () => {
+  const connectSocket = useCallback(() => {
     const token = localStorage.getItem("token");
 
-    const socket = io("http://localhost:3000", {
+    const socket = io("https://chatgpt-pwzr.onrender.com", {
       auth: {
         token: token,
       },
     });
 
     setSocket(socket);
-    setSocketUserId(user._id);
+    setSocketUserId(user?._id);
     setIsSocketConnected(true);
-  };
+  }, [user?._id]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user?._id) {
       connectSocket();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?._id, connectSocket]);
 
   return (
     <SocketContext.Provider
